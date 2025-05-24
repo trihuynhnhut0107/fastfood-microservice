@@ -11,16 +11,15 @@ This project demonstrates a microservices architecture for a fast-food managemen
 
 ## Quick Start
 
-1. Start databases: `docker-compose -f db/docker-compose.yml up -d`
-2. Start Kong: `docker-compose -f kong/docker-compose.yml up -d`
-3. Install dependencies and run each service:
-   - `cd services/orders && npm install && npm start`
-   - `cd services/menu && npm install && npm start`
+- Navigate to /fastfood-microservice
+- Use docker compose up --build --scale orders-service=3 --scale menu-service=3 -d (This will run whole project with 3 instances of order service and menu service)
+- Use node run-all-seeders.js to seed the dummy data into the project
 
 ## Endpoints
 
-- Orders: `GET http://localhost:3001/orders`
-- Menu: `GET http://localhost:3002/menu`
+- Orders: `GET http://localhost:8000/orders`
+- Menu: `GET http://localhost:8000/menu`
+- All navigation is made via Kong API Gateway at port 8000 (default)
 
 ## Notes
 
