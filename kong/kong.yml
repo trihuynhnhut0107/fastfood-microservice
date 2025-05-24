@@ -1,0 +1,42 @@
+_format_version: "3.0"
+
+upstreams:
+  - name: orders-upstream
+    targets:
+      - target: orders-service:3001
+      - target: orders-service-2:3001
+
+  - name: menu-upstream
+    targets:
+      - target: menu-service:3002
+
+services:
+  - name: orders-service
+    host: orders-upstream
+    port: 3001
+    protocol: http
+    routes:
+      - name: orders-route
+        paths:
+          - /orders
+
+  - name: menu-service
+    host: menu-upstream
+    port: 3002
+    protocol: http
+    routes:
+      - name: menu-route
+        paths:
+          - /menu
+
+  - name: kong-metrics
+    host: 127.0.0.1
+    port: 8001
+    protocol: http
+    routes:
+      - name: metrics-route
+        paths:
+          - /metrics
+
+plugins:
+  - name: prometheus

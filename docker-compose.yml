@@ -1,0 +1,113 @@
+version: "3.8"
+
+services:
+  citus_master:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_USER: fastfood
+      POSTGRES_PASSWORD: fastfood
+      POSTGRES_DB: fastfood
+    ports:
+      - "5501:5432"
+    volumes:
+      - citus_master_data:/var/lib/postgresql/data
+      - ./db/init-db-citus.sql:/docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      - citus_worker_1
+      - citus_worker_2
+
+  citus_worker_1:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_USER: fastfood
+      POSTGRES_PASSWORD: fastfood
+      POSTGRES_DB: fastfood
+    ports:
+      - "5502:5432"
+    volumes:
+      - citus_worker_1_data:/var/lib/postgresql/data
+
+  citus_worker_2:
+    image: citusdata/citus:12.1
+    environment:
+      POSTGRES_USER: fastfood
+      POSTGRES_PASSWORD: fastfood
+      POSTGRES_DB: fastfood
+    ports:
+      - "5503:5432"
+    volumes:
+      - citus_worker_2_data:/var/lib/postgresql/data
+
+  kong:
+    image: kong:latest
+    environment:
+      KONG_DATABASE: off
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    volumes:
+      - ./kong/kong.yml:/usr/local/kong/declarative/kong.yml
+    depends_on:
+      - citus_master
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    environment:
+      DATA_SOURCE_NAME: "postgresql://fastfood:fastfood@citus_master:5432/fastfood?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - citus_master
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./db/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - postgres_exporter
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  orders-service:
+    build:
+      context: ./services/orders
+      dockerfile: Dockerfile
+    environment:
+      PGHOST: citus_master
+      PGPORT: 5432
+      PGUSER: fastfood
+      PGPASSWORD: fastfood
+      PGDATABASE: fastfood
+    depends_on:
+      - citus_master
+    command: ["node", "index.js"]
+
+  menu-service:
+    build:
+      context: ./services/menu
+      dockerfile: Dockerfile
+    environment:
+      PGHOST: citus_master
+      PGPORT: 5432
+      PGUSER: fastfood
+      PGPASSWORD: fastfood
+      PGDATABASE: fastfood
+    depends_on:
+      - citus_master
+    command: ["node", "index.js"]
+
+volumes:
+  citus_master_data:
+  citus_worker_1_data:
+  citus_worker_2_data:

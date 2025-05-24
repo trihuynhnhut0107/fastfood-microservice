@@ -1,0 +1,66 @@
+# Fast-Food Management System PoC - Setup Script
+
+This script provides step-by-step commands to start all services and infrastructure for your PoC. Run each step in a PowerShell terminal from the project root (`d:\Study\Code\microservices-backend`).
+
+---
+
+# 1. Stop and Remove All Containers (if needed)
+docker-compose -f db/docker-compose.yml down
+
+docker-compose -f kong/docker-compose.yml down
+
+# 2. Start PostgreSQL Databases (shards)
+docker-compose -f db/docker-compose.yml up -d
+
+# 3. Start Kong API Gateway
+docker-compose -f kong/docker-compose.yml up -d
+
+# 4. Seed Menu Shards (run in three terminals or sequentially)
+# Example for db_menu_1 (port 5441):
+cd services/menu
+$env:PGPORT=5441; node seed.js
+# Example for db_menu_2 (port 5442):
+$env:PGPORT=5442; node seed.js
+# Example for db_menu_3 (port 5443):
+$env:PGPORT=5443; node seed.js
+
+# 5. Seed Orders Database
+cd services/orders
+node seed.js
+
+# 6. Start Orders Microservice
+cd services/orders
+npm install
+npm start
+# (Open a new terminal for the next service)
+
+# 7. Start Menu Microservice (choose a shard or run multiple instances)
+cd services/menu
+npm install
+npm start
+
+---
+
+# 8. Test Endpoints
+# Orders:  GET http://localhost:3001/orders
+# Menu:    GET http://localhost:3002/menu
+
+# 9. (Optional) Configure Kong Routes
+# Edit kong/kong.yml and reload Kong as needed.
+
+# Notes:
+# - Ensure Docker is running before starting databases and Kong.
+# - Seed the databases before starting the microservices.
+# - Use separate terminals for each microservice or menu shard.
+# - Update kong/kong.yml for custom routing/authentication.
+# - Use the correct PGPORT for each menu shard when seeding or running the service.
+
+
+Sharding check:
+
+docker exec -it microservices-backend-citus_master-1 psql -U fastfood -d fastfood
+
+SELECT logicalrelid::regclass AS table_name FROM pg_dist_partition;
+
+
+

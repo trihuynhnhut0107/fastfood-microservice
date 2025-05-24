@@ -1,0 +1,7 @@
+FROM node:18-alpine
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev
+COPY seed.js ./
+COPY wait-for-db.js ./
+CMD ["sh", "-c", "node wait-for-db.js && node seed.js"]
